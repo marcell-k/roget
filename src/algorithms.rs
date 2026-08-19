@@ -12,3 +12,6 @@ pub use precalc::PreCalc;
 
 mod hardcode_second;
 pub use hardcode_second::Cached;
+
+mod weight;
+pub use weight::Weight;

@@ -20,6 +20,7 @@ enum Implementation {
     OnceInit,
     PreCalc,
     Second,
+    Weight,
 }
 
 fn main() {
@@ -40,6 +41,9 @@ fn main() {
         Implementation::Second => {
             play(roget::algorithms::Cached::default, args.max);
         }
+        Implementation::Weight => {
+            play(roget::algorithms::Weight::default, args.max);
+        }
     }
 }
 
@@ -48,17 +52,22 @@ where
     G: Guesser,
 {
     let w = roget::Wordle::default();
+    let mut score = 0;
+    let mut games = 0;
     for answer in GAMES.split_whitespace().take(max.unwrap_or(usize::MAX)) {
+        games += 1;
         let guesser = (mk)();
         let answer = answer.as_bytes().try_into().expect("5 length");
-        if let Some(score) = w.play(answer, guesser) {
+        if let Some(s) = w.play(answer, guesser) {
+            score += s;
             println!(
                 "guessed '{}' in {}",
                 std::str::from_utf8(&answer).expect("5 length"),
-                score
+                s
             );
         } else {
             eprintln!("failed to guess");
         }
     }
+    println!("avg score: {:.2}", score as f64 / games as f64)
 }

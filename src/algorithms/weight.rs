@@ -1,37 +1,31 @@
-//! Place at src/algorithms/cached.rs
-//! Register in src/algorithms.rs:
-//!   mod cached;
-//!   pub use cached::Cached;
-//! Register in src/main.rs enum Implementation + match arm (see below).
-
 use once_cell::sync::OnceCell;
 
 use crate::{Correctness, DICTIONARY, Guess, Guesser, Word};
-use std::borrow::Cow;
+use std::{borrow::Cow, collections::BTreeMap};
 
 static INITIAL: OnceCell<Vec<(&'static Word, usize)>> = OnceCell::new();
 
-const ALL_WRONG: [Correctness; 5] = [Correctness::Wrong; 5];
+type MatchKey = (Word, Word, [Correctness; 5]);
+static MATCH: OnceCell<BTreeMap<MatchKey, bool>> = OnceCell::new();
 
-const TARES_ALL_WRONG_BEST: &Word = b"could";
-const CRATE_ALL_WRONG_BEST: &Word = b"sound";
-
-pub struct Cached {
+pub struct Weight {
     remaining: Cow<'static, [(&'static Word, usize)]>,
 }
 
-impl Default for Cached {
+impl Default for Weight {
     fn default() -> Self {
         Self {
             remaining: Cow::Borrowed(INITIAL.get_or_init(|| {
-                Vec::from_iter(DICTIONARY.lines().map(|line| {
+                let mut words = Vec::from_iter(DICTIONARY.lines().map(|line| {
                     let (word, count) = line
                         .split_once(' ')
                         .expect("every line is word + space + frequency");
                     let count: usize = count.parse().expect("every count is a number");
                     let word = word.as_bytes().try_into().expect("every word is 5 chars");
                     (word, count)
-                }))
+                }));
+                words.sort_unstable_by_key(|&(_, count)| std::cmp::Reverse(count));
+                words
             })),
         }
     }
@@ -43,20 +37,9 @@ struct Candidate {
     goodness: f64,
 }
 
-impl Guesser for Cached {
+impl Guesser for Weight {
     fn guess(&mut self, history: &[Guess]) -> Word {
         if let Some(last) = history.last() {
-            // fast path: first guess was tares/crate and came back all-Wrong ->
-            // skip the O(n^2) entropy scan, use precomputed best second guess.
-            if history.len() == 1 && last.mask == ALL_WRONG {
-                if &*last.word == b"tares" {
-                    return *TARES_ALL_WRONG_BEST;
-                }
-                if &*last.word == b"crate" {
-                    return *CRATE_ALL_WRONG_BEST;
-                }
-            }
-
             if matches!(self.remaining, Cow::Owned(_)) {
                 self.remaining
                     .to_mut()
@@ -72,7 +55,7 @@ impl Guesser for Cached {
             }
         }
         if history.is_empty() {
-            return *b"tares";
+            return *b"crate";
         }
 
         let remaining_count: usize = self.remaining.iter().map(|&(_, c)| c).sum();
@@ -80,26 +63,60 @@ impl Guesser for Cached {
         let mut best: Option<Candidate> = None;
         for &(word, count) in &*self.remaining {
             let mut sum = 0.0;
+            // TODO: dont consider correctness patterns that had no candidates in the prev iter
             for pattern in Correctness::patterns() {
+                // considering a world where we _did_ guess `word` and got `pattern` as the
+                // correctness. now, compute what _then_ is left.
                 let mut in_pattern_total = 0;
-                for (candidate, count) in &*self.remaining {
-                    let g = Guess {
-                        word: Cow::Borrowed(word),
-                        mask: pattern,
+                for &(candidate, count) in &*self.remaining {
+                    let matches = MATCH.get_or_init(|| {
+                        let words = &INITIAL.get().unwrap()[..512];
+                        let mut out = BTreeMap::new();
+
+                        for &(word1, _) in words {
+                            for &(word2, _) in words {
+                                if word2 < word1 {
+                                    break;
+                                }
+                                for pattern in Correctness::patterns() {
+                                    let g = Guess {
+                                        word: Cow::Borrowed(word1),
+                                        mask: pattern,
+                                    };
+                                    out.insert((*word1, *word2, pattern), g.matches(candidate));
+                                }
+                            }
+                        }
+                        out
+                    });
+
+                    let key = if word < candidate {
+                        (*word, *candidate, pattern)
+                    } else {
+                        (*candidate, *word, pattern)
                     };
-                    if g.matches(candidate) {
+                    if matches.get(&key).copied().unwrap_or_else(|| {
+                        let g = Guess {
+                            word: Cow::Borrowed(word),
+                            mask: pattern,
+                        };
+                        g.matches(candidate)
+                    }) {
                         in_pattern_total += count;
                     }
                 }
                 if in_pattern_total == 0 {
                     continue;
                 }
+                // TODO: apply sigmoid
                 let p_of_this_pattern = in_pattern_total as f64 / remaining_count as f64;
                 sum += p_of_this_pattern * p_of_this_pattern.log2();
             }
-            let p_prob = count as f64 / remaining_count as f64;
-            let goodness = p_prob * -sum;
+            // TODO: weight this by p_word
+            let p_word = count as f64 / remaining_count as f64;
+            let goodness = p_word * -sum;
             if let Some(c) = best {
+                // Is this one better?
                 if goodness > c.goodness {
                     best = Some(Candidate { word, goodness });
                 }
