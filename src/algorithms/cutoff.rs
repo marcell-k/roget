@@ -65,7 +65,7 @@ impl Guesser for Cutoff {
         let remaining_count: usize = self.remaining.iter().map(|&(_, c)| c).sum();
 
         let mut i = 0;
-        let stop = (self.remaining.len() / 2).max(20);
+        let stop = (self.remaining.len() / 3).max(20);
         let mut best: Option<Candidate> = None;
         for &(word, count) in &*self.remaining {
             let mut sum = 0.0;

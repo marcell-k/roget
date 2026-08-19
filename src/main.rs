@@ -23,6 +23,7 @@ enum Implementation {
     Weight,
     Prune,
     Cutoff,
+    Popular,
 }
 
 fn main() {
@@ -52,8 +53,13 @@ fn main() {
         Implementation::Cutoff => {
             play(roget::algorithms::Cutoff::default, args.max);
         }
+        Implementation::Popular => {
+            play(roget::algorithms::Popular::default, args.max);
+        }
     }
 }
+
+use std::time::Instant;
 
 fn play<G>(mut mk: impl FnMut() -> G, max: Option<usize>)
 where
@@ -62,6 +68,9 @@ where
     let w = roget::Wordle::default();
     let mut score = 0;
     let mut games = 0;
+
+    let start = Instant::now();
+
     for answer in GAMES.split_whitespace().take(max.unwrap_or(usize::MAX)) {
         games += 1;
         let guesser = (mk)();
@@ -77,5 +86,12 @@ where
             eprintln!("failed to guess");
         }
     }
-    println!("avg score: {:.2}", score as f64 / games as f64)
+
+    let duration = start.elapsed(); // Calculate total time
+
+    println!("avg score: {:.2}", score as f64 / games as f64);
+    println!("total time: {:?}", duration);
+    if games > 0 {
+        println!("avg time per game: {:?}", duration / games as u32);
+    }
 }
