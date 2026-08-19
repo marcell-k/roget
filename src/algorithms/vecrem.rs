@@ -1,8 +1,8 @@
-use crate::{Correctness, DICTIONARY, Guess, Guesser};
+use crate::{Correctness, DICTIONARY, Guess, Guesser, Word};
 use std::borrow::Cow;
 
 pub struct Vecrem {
-    remaining: Vec<(&'static str, usize)>,
+    remaining: Vec<(&'static Word, usize)>,
 }
 
 impl Default for Vecrem {
@@ -13,6 +13,7 @@ impl Default for Vecrem {
                     .split_once(' ')
                     .expect("every line is word + space + frequency");
                 let count: usize = count.parse().expect("every count is a number");
+                let word = word.as_bytes().try_into().expect("every word is 5 chars");
                 (word, count)
             })),
         }
@@ -21,17 +22,17 @@ impl Default for Vecrem {
 
 #[derive(Debug, Copy, Clone)]
 struct Candidate {
-    word: &'static str,
+    word: &'static Word,
     goodness: f64,
 }
 
 impl Guesser for Vecrem {
-    fn guess(&mut self, history: &[Guess]) -> String {
+    fn guess(&mut self, history: &[Guess]) -> Word {
         if let Some(last) = history.last() {
             self.remaining.retain(|(word, _)| last.matches(word));
         }
         if history.is_empty() {
-            return "tares".to_string();
+            return *b"tares";
         }
 
         let remaining_count: usize = self.remaining.iter().map(|&(_, c)| c).sum();
@@ -45,7 +46,7 @@ impl Guesser for Vecrem {
                 let mut in_pattern_total = 0;
                 for (candidate, count) in &self.remaining {
                     let g = Guess {
-                        word: Cow::Borrowed(word),
+                        word: Cow::Borrowed(*word),
                         mask: pattern,
                     };
                     if g.matches(candidate) {
@@ -69,6 +70,6 @@ impl Guesser for Vecrem {
                 best = Some(Candidate { word, goodness });
             }
         }
-        best.unwrap().word.to_string()
+        *best.unwrap().word
     }
 }

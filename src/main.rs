@@ -15,7 +15,6 @@ struct Args {
 
 #[derive(Debug, ValueEnum, Clone, Copy)]
 enum Implementation {
-    Naive,
     Allocs,
     Vecrem,
 }
@@ -23,9 +22,6 @@ enum Implementation {
 fn main() {
     let args = Args::parse();
     match args.implementation {
-        Implementation::Naive => {
-            play(roget::algorithms::Naive::default, args.max);
-        }
         Implementation::Allocs => {
             play(roget::algorithms::Allocs::default, args.max);
         }
@@ -42,8 +38,13 @@ where
     let w = roget::Wordle::default();
     for answer in GAMES.split_whitespace().take(max.unwrap_or(usize::MAX)) {
         let guesser = (mk)();
+        let answer = answer.as_bytes().try_into().expect("5 length");
         if let Some(score) = w.play(answer, guesser) {
-            println!("guessed '{}' in {}", answer, score);
+            println!(
+                "guessed '{}' in {}",
+                std::str::from_utf8(&answer).expect("5 length"),
+                score
+            );
         } else {
             eprintln!("failed to guess");
         }
