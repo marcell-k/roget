@@ -24,6 +24,7 @@ enum Implementation {
     Prune,
     Cutoff,
     Popular,
+    Cached,
 }
 
 fn main() {
@@ -39,7 +40,7 @@ fn main() {
             play(roget::algorithms::PreCalc::default, args.max);
         }
         Implementation::Second => {
-            play(roget::algorithms::Cached::default, args.max);
+            play(roget::algorithms::Second::default, args.max);
         }
         Implementation::Weight => {
             play(roget::algorithms::Weight::default, args.max);
@@ -52,6 +53,9 @@ fn main() {
         }
         Implementation::Popular => {
             play(roget::algorithms::Popular::default, args.max);
+        }
+        Implementation::Cached => {
+            play(roget::algorithms::Cached::default, args.max);
         }
     }
 }

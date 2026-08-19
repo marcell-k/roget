@@ -1,9 +1,3 @@
-//! Place at src/algorithms/cached.rs
-//! Register in src/algorithms.rs:
-//!   mod cached;
-//!   pub use cached::Cached;
-//! Register in src/main.rs enum Implementation + match arm (see below).
-
 use once_cell::sync::OnceCell;
 
 use crate::{Correctness, DICTIONARY, Guess, Guesser, Word};
@@ -16,11 +10,11 @@ const ALL_WRONG: [Correctness; 5] = [Correctness::Wrong; 5];
 const TARES_ALL_WRONG_BEST: &Word = b"could";
 const CRATE_ALL_WRONG_BEST: &Word = b"sound";
 
-pub struct Cached {
+pub struct Second {
     remaining: Cow<'static, [(&'static Word, usize)]>,
 }
 
-impl Default for Cached {
+impl Default for Second {
     fn default() -> Self {
         Self {
             remaining: Cow::Borrowed(INITIAL.get_or_init(|| {
@@ -43,7 +37,7 @@ struct Candidate {
     goodness: f64,
 }
 
-impl Guesser for Cached {
+impl Guesser for Second {
     fn guess(&mut self, history: &[Guess]) -> Word {
         if let Some(last) = history.last() {
             // fast path: first guess was tares/crate and came back all-Wrong ->
