@@ -17,6 +17,7 @@ struct Args {
 enum Implementation {
     Allocs,
     Vecrem,
+    OnceInit,
 }
 
 fn main() {
@@ -27,6 +28,9 @@ fn main() {
         }
         Implementation::Vecrem => {
             play(roget::algorithms::Vecrem::default, args.max);
+        }
+        Implementation::OnceInit => {
+            play(roget::algorithms::OnceInit::default, args.max);
         }
     }
 }
