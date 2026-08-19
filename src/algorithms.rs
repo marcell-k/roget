@@ -9,3 +9,6 @@ pub use once_init::OnceInit;
 
 mod precalc;
 pub use precalc::PreCalc;
+
+mod hardcode_second;
+pub use hardcode_second::Cached;
