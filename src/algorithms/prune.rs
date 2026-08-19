@@ -8,7 +8,7 @@ static PATTERNS: OnceCell<Vec<[Correctness; 5]>> = OnceCell::new();
 
 pub struct Prune {
     remaining: Cow<'static, [(&'static Word, usize)]>,
-    patterns: Cow<'static, Vec<[Correctness; 5]>>,
+    patterns: Cow<'static, [[Correctness; 5]]>,
 }
 
 impl Default for Prune {

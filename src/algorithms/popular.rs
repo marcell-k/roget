@@ -7,7 +7,7 @@ static INITIAL: OnceCell<Vec<(&'static Word, usize)>> = OnceCell::new();
 /// A strawman algorithm which simply chooses the most popular word of the
 /// words remaining which match the most recent mask
 pub struct Popular {
-    remaining: Cow<'static, Vec<(&'static Word, usize)>>,
+    remaining: Cow<'static, [(&'static Word, usize)]>,
 }
 
 impl Default for Popular {
