@@ -22,6 +22,7 @@ enum Implementation {
     Second,
     Weight,
     Prune,
+    Cutoff,
 }
 
 fn main() {
@@ -47,6 +48,9 @@ fn main() {
         }
         Implementation::Prune => {
             play(roget::algorithms::Prune::default, args.max);
+        }
+        Implementation::Cutoff => {
+            play(roget::algorithms::Cutoff::default, args.max);
         }
     }
 }
