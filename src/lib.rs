@@ -110,12 +110,14 @@ pub struct Guess<'a> {
 
 impl Guess<'_> {
     pub fn matches(&self, word: &str) -> bool {
-        assert_eq!(self.word.len(), 5);
-        assert_eq!(word.len(), 5);
-
-        let gchars = self.word.as_bytes();
-        let wchars = word.as_bytes();
-
+        // let a = self.matches_old(word);
+        // let b = Correctness::compute(word, &self.word) == self.mask;
+        // assert_eq!(a, b, "{} {} {:?}", self.word, word, self.mask);
+        // a
+        // if guess G gives mask C against A, then guess A should also give mask C against answer G
+        Correctness::compute(word, &self.word) == self.mask
+    }
+    pub fn matches_old(&self, word: &str) -> bool {
         // First, check greens
         let mut used = [false; 5];
         for (i, ((g, &m), w)) in self
@@ -260,11 +262,8 @@ mod tests {
         }
 
         #[test]
-        fn from_chat() {
-            // flocular
-            check!("aaabb" + [C M W W W] disallows "accaa");
-            // ritoban
-            check!("abcde" + [W W W W W] disallows "bcdea");
+        fn from_crash() {
+            check!("tares" + [W M M W W] disallows "brink");
         }
     }
     mod game {
