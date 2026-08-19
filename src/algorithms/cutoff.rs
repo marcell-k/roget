@@ -1,6 +1,6 @@
 use once_cell::sync::OnceCell;
 
-use crate::{Correctness, DICTIONARY, Guess, Guesser, Word};
+use crate::{Correctness, DICTIONARY, Guess, Guesser, MAX_MASK_ENUM, Word, enumerate_mask};
 use std::borrow::Cow;
 
 static INITIAL: OnceCell<Vec<(&'static Word, usize)>> = OnceCell::new();
@@ -68,39 +68,21 @@ impl Guesser for Cutoff {
         let stop = (self.remaining.len() / 3).max(20);
         let mut best: Option<Candidate> = None;
         for &(word, count) in &*self.remaining {
-            let mut sum = 0.0;
-            let check_pattern = |pattern: &[Correctness; 5]| {
-                let mut in_pattern_total = 0;
-                for (candidate, count) in &*self.remaining {
-                    let g = Guess {
-                        word: Cow::Borrowed(word),
-                        mask: *pattern,
-                    };
-                    if g.matches(candidate) {
-                        in_pattern_total += count;
-                    }
-                }
-                if in_pattern_total == 0 {
-                    return false;
-                }
-                // TODO: apply sigmoid
-                let p_of_this_pattern = in_pattern_total as f64 / remaining_count as f64;
-                sum += p_of_this_pattern * p_of_this_pattern.log2();
-                true
-            };
-
-            if matches!(self.patterns, Cow::Owned(_)) {
-                self.patterns.to_mut().retain(check_pattern);
-            } else {
-                self.patterns = Cow::Owned(
-                    self.patterns
-                        .iter()
-                        .copied()
-                        .filter(check_pattern)
-                        .collect(),
-                )
+            let mut totals = [0usize; MAX_MASK_ENUM];
+            for (candidate, count) in &*self.remaining {
+                let idx = enumerate_mask(&Correctness::compute(candidate, word));
+                totals[idx] += count;
             }
 
+            let sum: f64 = totals
+                .into_iter()
+                .filter(|t| *t != 0)
+                .map(|t| {
+                    // TODO: apply sigmoid
+                    let p_of_this_pattern = t as f64 / remaining_count as f64;
+                    p_of_this_pattern * p_of_this_pattern.log2()
+                })
+                .sum();
             let p_word = count as f64 / remaining_count as f64;
             let goodness = p_word * -sum;
             if let Some(c) = best {
