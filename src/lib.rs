@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::collections::HashSet;
 
 pub mod algorithms;
@@ -36,7 +37,7 @@ impl Wordle {
             );
             let correctness = Correctness::compute(answer, &guess);
             history.push(Guess {
-                word: guess,
+                word: Cow::Owned(guess),
                 mask: correctness,
             });
         }
@@ -102,23 +103,26 @@ impl Correctness {
     }
 }
 
-pub struct Guess {
-    pub word: String,
+pub struct Guess<'a> {
+    pub word: Cow<'a, str>,
     pub mask: [Correctness; 5],
 }
 
-impl Guess {
+impl Guess<'_> {
     pub fn matches(&self, word: &str) -> bool {
         assert_eq!(self.word.len(), 5);
         assert_eq!(word.len(), 5);
+
+        let gchars = self.word.as_bytes();
+        let wchars = word.as_bytes();
 
         // First, check greens
         let mut used = [false; 5];
         for (i, ((g, &m), w)) in self
             .word
-            .chars()
+            .bytes()
             .zip(&self.mask)
-            .zip(word.chars())
+            .zip(word.bytes())
             .enumerate()
         {
             if m == Correctness::Correct {
@@ -130,7 +134,7 @@ impl Guess {
             }
         }
 
-        for (i, (w, &m)) in word.chars().zip(&self.mask).enumerate() {
+        for (i, (w, &m)) in word.bytes().zip(&self.mask).enumerate() {
             if m == Correctness::Correct {
                 // must be correct, or we'd have returned in the earlier loop
                 continue;
@@ -139,7 +143,7 @@ impl Guess {
             let mut plausible = true;
             if self
                 .word
-                .chars()
+                .bytes()
                 .zip(&self.mask)
                 .enumerate()
                 .any(|(j, (g, m))| {
@@ -223,25 +227,26 @@ macro_rules! mask {
 mod tests {
     mod guess_matcher {
         use crate::Guess;
+        use std::borrow::Cow;
 
         macro_rules! check {
-            ($prev:literal + [$($mask:tt)+] allows $next:literal) => {
-                assert!(Guess {
-                    word: $prev.to_string(),
-                    mask: mask![$($mask )+]
-                }
-                .matches($next));
-                assert_eq!($crate::Correctness::compute($next, $prev), mask![$($mask )+]);
-            };
-            ($prev:literal + [$($mask:tt)+] disallows $next:literal) => {
-                assert!(!Guess {
-                    word: $prev.to_string(),
-                    mask: mask![$($mask )+]
-                }
-                .matches($next));
-                assert_ne!($crate::Correctness::compute($next, $prev), mask![$($mask )+]);
+        ($prev:literal + [$($mask:tt)+] allows $next:literal) => {
+            assert!(Guess {
+                word: Cow::Borrowed($prev),
+                mask: mask![$($mask )+]
             }
+            .matches($next));
+            assert_eq!($crate::Correctness::compute($next, $prev), mask![$($mask )+]);
+        };
+        ($prev:literal + [$($mask:tt)+] disallows $next:literal) => {
+            assert!(!Guess {
+                word: Cow::Borrowed($prev),
+                mask: mask![$($mask )+]
+            }
+            .matches($next));
+            assert_ne!($crate::Correctness::compute($next, $prev), mask![$($mask )+]);
         }
+    }
 
         #[test]
         fn from_jon() {
