@@ -18,7 +18,6 @@ struct Args {
 enum Implementation {
     Allocs,
     Vecrem,
-    OnceInit,
     PreCalc,
     Second,
     Weight,
@@ -35,9 +34,6 @@ fn main() {
         }
         Implementation::Vecrem => {
             play(roget::algorithms::Vecrem::default, args.max);
-        }
-        Implementation::OnceInit => {
-            play(roget::algorithms::OnceInit::default, args.max);
         }
         Implementation::PreCalc => {
             play(roget::algorithms::PreCalc::default, args.max);
