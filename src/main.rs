@@ -18,6 +18,7 @@ enum Implementation {
     Allocs,
     Vecrem,
     OnceInit,
+    PreCalc,
 }
 
 fn main() {
@@ -31,6 +32,9 @@ fn main() {
         }
         Implementation::OnceInit => {
             play(roget::algorithms::OnceInit::default, args.max);
+        }
+        Implementation::PreCalc => {
+            play(roget::algorithms::PreCalc::default, args.max);
         }
     }
 }
